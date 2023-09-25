@@ -4,25 +4,20 @@ import { cx } from "~/utils";
 
 import { TeledipityLogo } from "~/components";
 
-export interface TopBarProps {
-  children?: React.ReactNode;
-  /**
-   * Custom CSS classes visually expand this component
-   */
-  className?: string;
-  /**
-   * Should display the logo's condensed version, without the words?
-   */
-  condensedLogo?: boolean;
-}
+type WithChildren<T = {}> = T & { children?: React.ReactNode };
 
-export const TopBar: React.FC<TopBarProps> = ({
+type TopBarProps = WithChildren<{
+  className?: string;
+  condensedLogo?: boolean;
+}>;
+
+export const TopBar = ({
   children,
   className = "",
   condensedLogo = false,
-}) => {
+}: TopBarProps) => {
   return (
-    <div className="border-b bg-iceage border-b-softcarbon">
+    <div className="border-b bg-zinc-100 border-b-zinc-300">
       <div
         className={cx(
           "flex  items-center w-full  max-w-400 px-6 py-2 container mx-auto",
