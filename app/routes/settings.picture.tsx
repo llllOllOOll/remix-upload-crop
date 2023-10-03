@@ -5,7 +5,7 @@ import {
   unstable_createMemoryUploadHandler,
   json,
 } from "@remix-run/node";
-import { Form, Link, useSubmit } from "@remix-run/react";
+import { Form, Link, useActionData, useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import CropEasy from "~/components/cropImage/CropEasy";
 import { Avatar, AvatarImage } from "~/components/ui/avatar";
@@ -19,6 +19,9 @@ import {
 
 import { CropIcon } from "@radix-ui/react-icons";
 import { Button } from "~/components/ui/button";
+import { z } from "zod";
+import { getFieldsetConstraint, parse } from "@conform-to/zod";
+import { conform, useForm } from "@conform-to/react";
 
 export const meta: V2_MetaFunction = () => {
   return [
@@ -29,30 +32,71 @@ export const meta: V2_MetaFunction = () => {
 
 const MAX_SIZE = 1024 * 1024 * 3; // 3MB
 
+const SubmitFormSchema = z.object({
+  intent: z.literal("submit"),
+  picture: z
+    .instanceof(File)
+    .refine((file) => file.size > 0, "Image is required")
+    .refine(
+      (file) => file.size <= MAX_SIZE,
+      "Image size must be less than 3MB"
+    ),
+});
+
+const PhotoFormSchema = SubmitFormSchema;
+
 export async function loader({ request }: DataFunctionArgs) {
   return json({});
 }
 
 export async function action({ request }: DataFunctionArgs) {
-  console.log("Action");
   const formData = await unstable_parseMultipartFormData(
     request,
     unstable_createMemoryUploadHandler({ maxPartSize: MAX_SIZE })
   );
 
-  //const formData = await request.formData();
+  console.log("Before submission");
+
+  const submission = await parse(formData, {
+    schema: PhotoFormSchema.transform(async (data) => {
+      if (data.picture.size <= 0) return z.NEVER;
+      return {
+        intent: data.intent,
+        image: {
+          contentType: data.picture.type,
+          blob: Buffer.from(await data.picture.arrayBuffer()),
+        },
+      };
+    }),
+    async: true,
+  });
+
+  console.log("Submission:", submission.value);
+
   const data = Object.fromEntries(formData);
   console.log(data);
   return null;
 }
 
-export default function Index() {
-  const [fileImage, setFile] = useState<string | null>(null);
-  // const [photoURL, setPhotoURL] = useState(null);
+export default function PictureLoad() {
+  const [fileImage, setFile] = useState<File | null>(null);
+  const [fileImageBlob, setFileBlob] = useState<string | null>(null);
   const [openCrop, setOpenCrop] = useState(false);
   const [openProfile, setOpenProfile] = useState(true);
 
   const submit = useSubmit();
+
+  const actionData = useActionData<typeof action>();
+
+  const [form, fields] = useForm({
+    id: "profile-photo",
+    constraint: getFieldsetConstraint(PhotoFormSchema),
+    lastSubmission: actionData?.submission,
+    onValidate({ formData }) {
+      return parse(formData, { schema: PhotoFormSchema });
+    },
+    shouldRevalidate: "onBlur",
+  });
 
   return !openCrop ? (
     <>
@@ -69,11 +113,14 @@ export default function Index() {
             className="w-full"
             method="post"
             encType="multipart/form-data"
+            {...form.props}
             onSubmit={(event) => {
               event.preventDefault();
 
               const formData = new FormData();
+
               formData.append("picture", fileImage);
+              formData.append("intent", "submit");
               submit(formData, {
                 method: "post",
                 encType: "multipart/form-data",
@@ -82,7 +129,7 @@ export default function Index() {
           >
             <div className="relative">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={fileImage} alt="@shadcn" />
+                <AvatarImage src={fileImageBlob} alt="" />
               </Avatar>
 
               <div className="absolute inset-0 top-4 left-14">
@@ -97,40 +144,46 @@ export default function Index() {
                   </Button>
                 )}
               </div>
-              <div>{fileImage ? <Button>Save</Button> : null}</div>
+              <div>
+                {fileImage ? (
+                  <Button type="submit" name="intent" value="submit">
+                    Save
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex gap-4 items-center justify-end">
               <Link to="/settings">Cancel</Link>
               <label
                 className="bg-pink-400  flex items-center rounded-full  px-16   text-md h-11  text-white text-center cursor-pointer hover:bg-pink-200"
-                htmlFor="photoProfile"
+                htmlFor="profile-photo-picture"
               >
                 Upload Picture
               </label>
               <input
-                id="photoProfile"
+                {...conform.input(fields.picture, { type: "file" })}
                 hidden
-                name="file2"
-                type="file"
                 onChange={(e) => {
                   const file = e.currentTarget.files?.[0];
                   if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                      setFile(event.target?.result?.toString() ?? null);
+                      setFileBlob(event.target?.result?.toString() ?? null);
                       setOpenCrop(true);
+                      setFile(file);
                     };
                     reader.readAsDataURL(file);
                   }
                 }}
               />
             </div>
+            {form.errors}
           </Form>
         </DialogContent>
       </Dialog>
     </>
   ) : (
-    <CropEasy {...{ fileImage, setOpenCrop, setFile }} />
+    <CropEasy {...{ fileImageBlob, setOpenCrop, setFile, setFileBlob }} />
   );
 }

@@ -12,7 +12,12 @@ import { ZoomInIcon, ZoomOutIcon } from "@radix-ui/react-icons";
 import getCroppedImg from "./ultils/cropImage";
 import { Slider } from "../ui/slider";
 
-export default function CropEasy({ fileImage, setOpenCrop, setFile }: any) {
+export default function CropEasy({
+  fileImageBlob,
+  setOpenCrop,
+  setFile,
+  setFileBlob,
+}: any) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
@@ -23,15 +28,17 @@ export default function CropEasy({ fileImage, setOpenCrop, setFile }: any) {
 
   const cropImage = async () => {
     try {
-      const response = await getCroppedImg(fileImage, croppedAreaPixels);
+      const response = await getCroppedImg(fileImageBlob, croppedAreaPixels);
 
       if (response) {
         const { file } = response;
 
+        const fileCropped = new File([file], "cropped.jpeg");
         if (file) {
           const reader = new FileReader();
           reader.onload = (event) => {
-            setFile(event.target?.result ?? null);
+            setFileBlob(event.target?.result ?? null);
+            setFile(fileCropped ?? null);
             setOpenCrop(false);
           };
           reader.readAsDataURL(file);
@@ -50,7 +57,7 @@ export default function CropEasy({ fileImage, setOpenCrop, setFile }: any) {
         </DialogHeader>
         <div className="relative w-full h-[600px]">
           <Cropper
-            image={fileImage}
+            image={fileImageBlob}
             crop={crop}
             zoom={zoom}
             aspect={1}
