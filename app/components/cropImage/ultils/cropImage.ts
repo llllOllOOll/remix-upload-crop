@@ -1,4 +1,4 @@
-export const createImage = (url) =>
+export const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener("load", () => resolve(image));
@@ -7,14 +7,18 @@ export const createImage = (url) =>
     image.src = url;
   });
 
-export function getRadianAngle(degreeValue) {
+export function getRadianAngle(degreeValue: number): number {
   return (degreeValue * Math.PI) / 180;
 }
 
 /**
  * Returns the new bounding area of a rotated rectangle.
  */
-export function rotateSize(width, height, rotation) {
+export function rotateSize(
+  width: number,
+  height: number,
+  rotation: number
+): { width: number; height: number } {
   const rotRad = getRadianAngle(rotation);
 
   return {
@@ -29,11 +33,14 @@ export function rotateSize(width, height, rotation) {
  * This function was adapted from the one in the ReadMe of https://github.com/DominicTobias/react-image-crop
  */
 export default async function getCroppedImg(
-  imageSrc,
-  pixelCrop,
-  rotation = 0,
-  flip = { horizontal: false, vertical: false }
-) {
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number },
+  rotation: number = 0,
+  flip: { horizontal: boolean; vertical: boolean } = {
+    horizontal: false,
+    vertical: false,
+  }
+): Promise<{ file: Blob; url: string } | null> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -73,21 +80,33 @@ export default async function getCroppedImg(
     pixelCrop.height
   );
 
-  // set canvas width to final desired crop size - this will clear existing context
+  // set canvas width to the final desired crop size - this will clear the existing context
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
 
-  // paste generated rotate image at the top left corner
+  // paste the generated rotated image at the top left corner
   ctx.putImageData(data, 0, 0);
 
   // As Base64 string
   // return canvas.toDataURL('image/jpeg');
 
-  // As a blob
-  return new Promise((resolve, reject) => {
+  // As a blob with the desired name
+  const croppedBlob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((file) => {
-      file.name = "cropped.jpeg";
-      resolve({ file: file, url: URL.createObjectURL(file) });
+      resolve(file);
     }, "image/jpeg");
   });
+
+  if (!croppedBlob) {
+    return null;
+  }
+
+  const croppedBlobWithNewName = new File([croppedBlob], "cropped.jpeg", {
+    type: "image/jpeg",
+  });
+
+  return {
+    file: croppedBlobWithNewName,
+    url: URL.createObjectURL(croppedBlobWithNewName),
+  };
 }

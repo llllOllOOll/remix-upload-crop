@@ -5,7 +5,7 @@ import {
   unstable_createMemoryUploadHandler,
   json,
 } from "@remix-run/node";
-import { Form, Link, useLoaderData, useSubmit } from "@remix-run/react";
+import { Form, Link, useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import CropEasy from "~/components/cropImage/CropEasy";
 import { Avatar, AvatarImage } from "~/components/ui/avatar";
@@ -17,7 +17,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 
-import avatar from "public/svg/avatar.png";
 import { CropIcon } from "@radix-ui/react-icons";
 import { Button } from "~/components/ui/button";
 
@@ -34,7 +33,7 @@ export async function loader({ request }: DataFunctionArgs) {
   return json({});
 }
 
-export async function action({ request }) {
+export async function action({ request }: DataFunctionArgs) {
   console.log("Action");
   const formData = await unstable_parseMultipartFormData(
     request,
@@ -49,7 +48,7 @@ export async function action({ request }) {
 
 export default function Index() {
   const [fileImage, setFile] = useState<string | null>(null);
-  const [photoURL, setPhotoURL] = useState(null);
+  // const [photoURL, setPhotoURL] = useState(null);
   const [openCrop, setOpenCrop] = useState(false);
   const [openProfile, setOpenProfile] = useState(true);
 
@@ -74,7 +73,7 @@ export default function Index() {
               event.preventDefault();
 
               const formData = new FormData();
-              formData.append("myKey", fileImage);
+              formData.append("picture", fileImage);
               submit(formData, {
                 method: "post",
                 encType: "multipart/form-data",
@@ -100,6 +99,7 @@ export default function Index() {
               </div>
               <div>{fileImage ? <Button>Save</Button> : null}</div>
             </div>
+
             <div className="flex gap-4 items-center justify-end">
               <Link to="/settings">Cancel</Link>
               <label
@@ -118,7 +118,7 @@ export default function Index() {
                   if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                      setFile(event.target?.result ?? null);
+                      setFile(event.target?.result?.toString() ?? null);
                       setOpenCrop(true);
                     };
                     reader.readAsDataURL(file);
@@ -127,23 +127,10 @@ export default function Index() {
               />
             </div>
           </Form>
-
-          {/* <DialogFooter className="px-8">
-            <Button
-              onClick={() => {
-                // setOpenProfile(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button className="w-full bg-pinegreen rounded-full bg-zinc-400">
-              <Link to="/profile/photo">Test</Link>
-            </Button>
-          </DialogFooter> */}
         </DialogContent>
       </Dialog>
     </>
   ) : (
-    <CropEasy {...{ fileImage, setOpenCrop, setPhotoURL, setFile }} />
+    <CropEasy {...{ fileImage, setOpenCrop, setFile }} />
   );
 }

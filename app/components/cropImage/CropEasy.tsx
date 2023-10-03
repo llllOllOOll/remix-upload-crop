@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Cropper from "react-easy-crop";
 import { Button } from "~/components/ui/button";
 import {
@@ -12,43 +12,32 @@ import { ZoomInIcon, ZoomOutIcon } from "@radix-ui/react-icons";
 import getCroppedImg from "./ultils/cropImage";
 import { Slider } from "../ui/slider";
 
-export default function CropEasy({
-  fileImage,
-  setOpenCrop,
-  setPhotoURL,
-  setFile,
-}) {
+export default function CropEasy({ fileImage, setOpenCrop, setFile }: any) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
-  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+  const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
   const cropImage = async () => {
     try {
-      const { file, url } = await getCroppedImg(fileImage, croppedAreaPixels);
-      //setPhotoURL(url);
-      // const file = e.currentTarget.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setFile(event.target?.result ?? null);
-          setOpenCrop(false);
-        };
-        reader.readAsDataURL(file);
+      const response = await getCroppedImg(fileImage, croppedAreaPixels);
+
+      if (response) {
+        const { file } = response;
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setFile(event.target?.result ?? null);
+            setOpenCrop(false);
+          };
+          reader.readAsDataURL(file);
+        }
       }
-      //setFile(file.toString());
-      //setOpenCrop(false);
     } catch (error) {
-      // setAlert({
-      //   isAlert: true,
-      //   severity: "error",
-      //   message: error.message,
-      //   timeout: 5000,
-      //   location: "modal",
-      // });
       console.log(error);
     }
   };
@@ -96,9 +85,3 @@ export default function CropEasy({
     </Dialog>
   );
 }
-
-// export default CropEasy;
-
-// const zoomPercent = (value) => {
-//   return `${Math.round(value * 100)}%`;
-// };
